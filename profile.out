@@ -1,0 +1,360 @@
+Total: 384 samples
+     322  83.9%  83.9%      384 100.0% list_function
+      16   4.2%  88.0%       16   4.2% ?? /usr/src/debug////////glibc-2.17-c758a686/string/../sysdeps/x86_64/multiarch/strcmp-sse42.S:204
+      10   2.6%  90.6%       10   2.6% ?? /usr/src/debug////////glibc-2.17-c758a686/string/../sysdeps/x86_64/multiarch/strcmp-sse42.S:1734
+       8   2.1%  92.7%        8   2.1% ?? /usr/src/debug////////glibc-2.17-c758a686/string/../sysdeps/x86_64/multiarch/strcmp-sse42.S:203
+       8   2.1%  94.8%       38   9.9% SortedList_insert
+       5   1.3%  96.1%        5   1.3% ?? /usr/src/debug////////glibc-2.17-c758a686/string/../sysdeps/x86_64/multiarch/strcmp-sse42.S:1734
+       4   1.0%  97.1%        4   1.0% ?? /usr/src/debug////////glibc-2.17-c758a686/string/../sysdeps/x86_64/multiarch/strcmp-sse42.S:1734
+       4   1.0%  98.2%        4   1.0% ?? /usr/src/debug////////glibc-2.17-c758a686/string/../sysdeps/x86_64/multiarch/strcmp-sse42.S:1734
+       3   0.8%  99.0%       24   6.2% SortedList_lookup
+       1   0.3%  99.2%        1   0.3% ?? /usr/src/debug////////glibc-2.17-c758a686/string/../sysdeps/x86_64/multiarch/strcmp-sse42.S:211
+       1   0.3%  99.5%        1   0.3% ?? /usr/src/debug////////glibc-2.17-c758a686/string/../sysdeps/x86_64/multiarch/strcmp-sse42.S:212
+       1   0.3%  99.7%        1   0.3% ?? /usr/src/debug////////glibc-2.17-c758a686/string/../sysdeps/x86_64/multiarch/strcmp-sse42.S:1733
+       1   0.3% 100.0%        1   0.3% _init
+       0   0.0% 100.0%      384 100.0% ?? /usr/src/debug////////glibc-2.17-c758a686/misc/../sysdeps/unix/sysv/linux/x86_64/clone.S:118
+       0   0.0% 100.0%      384 100.0% start_thread
+ROUTINE ====================== list_function in /u/ee/ugrad/quach/lab2b_gitfolder/lab2_list.c
+   322    384 Total samples (flat / cumulative)
+     .      .   94: Looks ugly so you can alter the same logic to:
+     .      .   95: int startIndex = *((int*)thread_id);
+     .      .   96: for (i = startIndex; i < num_elments; i = i + numthreads);
+     .      .   97: since num_elements = iterations*numthreads;
+     .      .   98: */
+---
+     .      .   99: void* list_function(void* thread_id){
+     .      .  100:  	struct timespec start;
+     .      .  101: 	struct timespec end;
+     .      .  102: 	int startIndex = *((int*)thread_id);
+     .      .  103: 	//inserts them all into a (single shared-by-all-threads)
+     .      .  104: 	for (int i = startIndex; i < num_elements; i = i + numthreads){
+     .      .  105: 		if(opt_sync == 'm' && mutexflag){
+     .      .  106: 			if(clock_gettime(CLOCK_MONOTONIC, &start) == -1){
+     .      .  107: 				print_error("Error: clock gettime error for start");
+     .      .  108: 			}
+     .      .  109: 
+     .      .  110: 			pthread_mutex_lock(&mutexs[hash_key[i]]);
+     .      .  111: 
+     .      .  112: 			if(clock_gettime(CLOCK_MONOTONIC, &end) == -1){
+     .      .  113: 				print_error("Error: clock gettime error for end");
+     .      .  114: 			}
+     .      .  115: 
+     .      .  116: 			wait_time += 1000000000L * (end.tv_sec - start.tv_sec) + end.tv_nsec - start.tv_nsec;
+     .      .  117: 			SortedList_insert(&lists[hash_key[i]],elements + i);
+     .      .  118: 			pthread_mutex_unlock(&mutexs[hash_key[i]]);
+     .      .  119: 		} 
+     .      .  120: 		else if (opt_sync == 's' && spinlockflag){
+     .      .  121: 			if(clock_gettime(CLOCK_MONOTONIC, &start) == -1){
+     .      .  122: 				print_error("Error: clock gettime error for start");
+     .      .  123: 			}
+   254    254  124: 			while(__sync_lock_test_and_set(&spinlocks[hash_key[i]],1));
+     .      .  125: 
+     .      .  126: 
+     .      .  127: 			if(clock_gettime(CLOCK_MONOTONIC, &end) == -1){
+     .      .  128: 				print_error("Error: clock gettime error for end");
+     .      .  129: 			}
+     .      .  130: 			wait_time += 1000000000L * (end.tv_sec - start.tv_sec) + end.tv_nsec - start.tv_nsec;
+     .     38  131: 			SortedList_insert(&lists[hash_key[i]],elements + i);
+     .      .  132: 			__sync_lock_release(&spinlocks[hash_key[i]]);
+     .      .  133: 		}
+     .      .  134: 		else{
+     .      .  135: 			SortedList_insert(&lists[hash_key[i]],elements + i);
+     .      .  136: 		}
+     .      .  137: 	}
+     .      .  138: 	//gets the length
+     .      .  139: 	int size;
+     .      .  140: 	if (opt_sync == 'm' && mutexflag){
+     .      .  141: 		for (int j = 0; j < numlist ; j++){
+     .      .  142: 			if(clock_gettime(CLOCK_MONOTONIC, &start) == -1){
+     .      .  143: 				print_error("Error: clock gettime error for start");
+     .      .  144: 			}
+     .      .  145: 
+     .      .  146: 			pthread_mutex_lock(&mutexs[j]);
+     .      .  147: 
+     .      .  148: 			if(clock_gettime(CLOCK_MONOTONIC, &end) == -1){
+     .      .  149: 				print_error("Error: clock gettime error for end");
+     .      .  150: 			}
+     .      .  151: 
+     .      .  152: 			wait_time += 1000000000L * (end.tv_sec - start.tv_sec) + end.tv_nsec - start.tv_nsec;
+     .      .  153: 			
+     .      .  154: 			int length = SortedList_length(&lists[j]);
+     .      .  155: 			if (length == -1)
+     .      .  156: 			{
+     .      .  157: 				print_error2("Error: Corrupted &lists[hash_key[i]]");
+     .      .  158: 			} else {
+     .      .  159: 				size += length;
+     .      .  160: 			}
+     .      .  161: 			pthread_mutex_unlock(&mutexs[j]);
+     .      .  162: 		}
+     .      .  163: 	} 
+     .      .  164: 	else if (opt_sync == 's' && spinlockflag){
+     .      .  165: 		for (int k = 0; k < numlist ; k++){
+     .      .  166: 			if(clock_gettime(CLOCK_MONOTONIC, &start) == -1){
+     .      .  167: 				print_error("Error: clock gettime error for start");
+     .      .  168: 			}
+     .      .  169: 
+     .      .  170: 			while(__sync_lock_test_and_set(&spinlocks[k],1));
+     .      .  171: 
+     .      .  172: 			if(clock_gettime(CLOCK_MONOTONIC, &end) == -1){
+     .      .  173: 				print_error("Error: clock gettime error for end");
+     .      .  174: 			}
+     .      .  175: 
+     .      .  176: 			wait_time += 1000000000L * (end.tv_sec - start.tv_sec) + end.tv_nsec - start.tv_nsec;
+     .      .  177: 			int length = SortedList_length(&lists[k]);
+     .      .  178: 			if (length == -1)
+     .      .  179: 			{
+     .      .  180: 				print_error2("Error: Corrupted &lists[hash_key[i]]");
+     .      .  181: 			} else {
+     .      .  182: 				size += length;
+     .      .  183: 			}
+     .      .  184: 			__sync_lock_release(&spinlocks[k]);
+     .      .  185: 		}
+     .      .  186: 
+     .      .  187: 	}
+     .      .  188: 	else {
+     .      .  189: 		for (int z = 0; z < numlist ; z++){
+     .      .  190: 			int length = SortedList_length(&lists[z]);
+     .      .  191: 			if (length == -1)
+     .      .  192: 			{
+     .      .  193: 				print_error2("Error: Corrupted &lists[hash_key[i]]");
+     .      .  194: 			} else {
+     .      .  195: 				size += length;
+     .      .  196: 			}
+     .      .  197: 		}
+     .      .  198: 	}
+     .      .  199: 	// looks up and deletes each of the keys it had previously inserted
+     .      .  200: 	SortedListElement_t *find;
+     .      .  201: 	for (int i = startIndex; i < num_elements; i = i + numthreads)
+     .      .  202: 	{
+     .      .  203: 		if(opt_sync == 'm' && mutexflag){
+     .      .  204: 			if(clock_gettime(CLOCK_MONOTONIC, &start) == -1){
+     .      .  205: 				print_error("Error: clock gettime error for start");
+     .      .  206: 			}
+     .      .  207: 			
+     .      .  208: 			pthread_mutex_lock(&mutexs[hash_key[i]]);
+     .      .  209: 			
+     .      .  210: 			if(clock_gettime(CLOCK_MONOTONIC, &end) == -1){
+     .      .  211: 				print_error("Error: clock gettime error for end");
+     .      .  212: 			}
+     .      .  213: 			wait_time += 1000000000L * (end.tv_sec - start.tv_sec) + end.tv_nsec - start.tv_nsec;
+     .      .  214: 			
+     .      .  215: 			find = SortedList_lookup(&lists[hash_key[i]],elements[i].key);
+     .      .  216: 			if (find == NULL){
+     .      .  217: 				print_error2("Error: Lookup but Corrupted list");
+     .      .  218: 			}
+     .      .  219: 			if (SortedList_delete(find)){
+     .      .  220: 				print_error2("Error: Delete but corrupted list");
+     .      .  221: 			}
+     .      .  222: 			pthread_mutex_unlock(&mutexs[hash_key[i]]);
+     .      .  223: 		} 
+     .      .  224: 		else if (opt_sync == 's' && spinlockflag){
+     .      .  225: 			if(clock_gettime(CLOCK_MONOTONIC, &start) == -1){
+     .      .  226: 				print_error("Error: clock gettime error for start");
+     .      .  227: 			}
+    68     68  228: 			while(__sync_lock_test_and_set(&spinlocks[hash_key[i]],1));
+     .      .  229: 
+     .      .  230: 			if(clock_gettime(CLOCK_MONOTONIC, &end) == -1){
+     .      .  231: 				print_error("Error: clock gettime error for end");
+     .      .  232: 			}
+     .      .  233: 
+     .      .  234: 			wait_time += 1000000000L * (end.tv_sec - start.tv_sec) + end.tv_nsec - start.tv_nsec;
+     .      .  235: 			
+     .     24  236: 			find = SortedList_lookup(&lists[hash_key[i]],elements[i].key);
+     .      .  237: 			if (find == NULL){
+     .      .  238: 				print_error2("Error: Lookup but Corrupted &lists[hash_key[i]]");
+     .      .  239: 			}
+     .      .  240: 			if (SortedList_delete(find)){
+     .      .  241: 				print_error2("Error: Delete but corrupted &lists[hash_key[i]]");
+     .      .  242: 			}
+     .      .  243: 			__sync_lock_release(&spinlocks[hash_key[i]]);
+     .      .  244: 		}
+     .      .  245: 		else{
+     .      .  246: 			find = SortedList_lookup(&lists[hash_key[i]],elements[i].key);
+     .      .  247: 			if (find == NULL){
+     .      .  248: 				print_error2("Error: Lookup but Corrupted &lists[hash_key[i]]");
+     .      .  249: 			}
+     .      .  250: 			if (SortedList_delete(find)){
+     .      .  251: 				print_error2("Error: Delete but corrupted &lists[hash_key[i]]");
+     .      .  252: 			}
+     .      .  253: 		}
+     .      .  254: 	}
+     .      .  255: 	return NULL;
+     .      .  256: }
+---
+     .      .  257: 
+     .      .  258: int main(int argc, char **argv){
+     .      .  259: 	int choice;
+     .      .  260: 
+     .      .  261: 	/*-----------------------Argument Setup----------------------------*/
+ROUTINE ====================== list_function in /u/ee/ugrad/quach/lab2b_gitfolder/lab2_list.c
+   322    384 Total samples (flat / cumulative)
+     .      .   94: Looks ugly so you can alter the same logic to:
+     .      .   95: int startIndex = *((int*)thread_id);
+     .      .   96: for (i = startIndex; i < num_elments; i = i + numthreads);
+     .      .   97: since num_elements = iterations*numthreads;
+     .      .   98: */
+---
+     .      .   99: void* list_function(void* thread_id){
+     .      .  100:  	struct timespec start;
+     .      .  101: 	struct timespec end;
+     .      .  102: 	int startIndex = *((int*)thread_id);
+     .      .  103: 	//inserts them all into a (single shared-by-all-threads)
+     .      .  104: 	for (int i = startIndex; i < num_elements; i = i + numthreads){
+     .      .  105: 		if(opt_sync == 'm' && mutexflag){
+     .      .  106: 			if(clock_gettime(CLOCK_MONOTONIC, &start) == -1){
+     .      .  107: 				print_error("Error: clock gettime error for start");
+     .      .  108: 			}
+     .      .  109: 
+     .      .  110: 			pthread_mutex_lock(&mutexs[hash_key[i]]);
+     .      .  111: 
+     .      .  112: 			if(clock_gettime(CLOCK_MONOTONIC, &end) == -1){
+     .      .  113: 				print_error("Error: clock gettime error for end");
+     .      .  114: 			}
+     .      .  115: 
+     .      .  116: 			wait_time += 1000000000L * (end.tv_sec - start.tv_sec) + end.tv_nsec - start.tv_nsec;
+     .      .  117: 			SortedList_insert(&lists[hash_key[i]],elements + i);
+     .      .  118: 			pthread_mutex_unlock(&mutexs[hash_key[i]]);
+     .      .  119: 		} 
+     .      .  120: 		else if (opt_sync == 's' && spinlockflag){
+     .      .  121: 			if(clock_gettime(CLOCK_MONOTONIC, &start) == -1){
+     .      .  122: 				print_error("Error: clock gettime error for start");
+     .      .  123: 			}
+   254    254  124: 			while(__sync_lock_test_and_set(&spinlocks[hash_key[i]],1));
+     .      .  125: 
+     .      .  126: 
+     .      .  127: 			if(clock_gettime(CLOCK_MONOTONIC, &end) == -1){
+     .      .  128: 				print_error("Error: clock gettime error for end");
+     .      .  129: 			}
+     .      .  130: 			wait_time += 1000000000L * (end.tv_sec - start.tv_sec) + end.tv_nsec - start.tv_nsec;
+     .     38  131: 			SortedList_insert(&lists[hash_key[i]],elements + i);
+     .      .  132: 			__sync_lock_release(&spinlocks[hash_key[i]]);
+     .      .  133: 		}
+     .      .  134: 		else{
+     .      .  135: 			SortedList_insert(&lists[hash_key[i]],elements + i);
+     .      .  136: 		}
+     .      .  137: 	}
+     .      .  138: 	//gets the length
+     .      .  139: 	int size;
+     .      .  140: 	if (opt_sync == 'm' && mutexflag){
+     .      .  141: 		for (int j = 0; j < numlist ; j++){
+     .      .  142: 			if(clock_gettime(CLOCK_MONOTONIC, &start) == -1){
+     .      .  143: 				print_error("Error: clock gettime error for start");
+     .      .  144: 			}
+     .      .  145: 
+     .      .  146: 			pthread_mutex_lock(&mutexs[j]);
+     .      .  147: 
+     .      .  148: 			if(clock_gettime(CLOCK_MONOTONIC, &end) == -1){
+     .      .  149: 				print_error("Error: clock gettime error for end");
+     .      .  150: 			}
+     .      .  151: 
+     .      .  152: 			wait_time += 1000000000L * (end.tv_sec - start.tv_sec) + end.tv_nsec - start.tv_nsec;
+     .      .  153: 			
+     .      .  154: 			int length = SortedList_length(&lists[j]);
+     .      .  155: 			if (length == -1)
+     .      .  156: 			{
+     .      .  157: 				print_error2("Error: Corrupted &lists[hash_key[i]]");
+     .      .  158: 			} else {
+     .      .  159: 				size += length;
+     .      .  160: 			}
+     .      .  161: 			pthread_mutex_unlock(&mutexs[j]);
+     .      .  162: 		}
+     .      .  163: 	} 
+     .      .  164: 	else if (opt_sync == 's' && spinlockflag){
+     .      .  165: 		for (int k = 0; k < numlist ; k++){
+     .      .  166: 			if(clock_gettime(CLOCK_MONOTONIC, &start) == -1){
+     .      .  167: 				print_error("Error: clock gettime error for start");
+     .      .  168: 			}
+     .      .  169: 
+     .      .  170: 			while(__sync_lock_test_and_set(&spinlocks[k],1));
+     .      .  171: 
+     .      .  172: 			if(clock_gettime(CLOCK_MONOTONIC, &end) == -1){
+     .      .  173: 				print_error("Error: clock gettime error for end");
+     .      .  174: 			}
+     .      .  175: 
+     .      .  176: 			wait_time += 1000000000L * (end.tv_sec - start.tv_sec) + end.tv_nsec - start.tv_nsec;
+     .      .  177: 			int length = SortedList_length(&lists[k]);
+     .      .  178: 			if (length == -1)
+     .      .  179: 			{
+     .      .  180: 				print_error2("Error: Corrupted &lists[hash_key[i]]");
+     .      .  181: 			} else {
+     .      .  182: 				size += length;
+     .      .  183: 			}
+     .      .  184: 			__sync_lock_release(&spinlocks[k]);
+     .      .  185: 		}
+     .      .  186: 
+     .      .  187: 	}
+     .      .  188: 	else {
+     .      .  189: 		for (int z = 0; z < numlist ; z++){
+     .      .  190: 			int length = SortedList_length(&lists[z]);
+     .      .  191: 			if (length == -1)
+     .      .  192: 			{
+     .      .  193: 				print_error2("Error: Corrupted &lists[hash_key[i]]");
+     .      .  194: 			} else {
+     .      .  195: 				size += length;
+     .      .  196: 			}
+     .      .  197: 		}
+     .      .  198: 	}
+     .      .  199: 	// looks up and deletes each of the keys it had previously inserted
+     .      .  200: 	SortedListElement_t *find;
+     .      .  201: 	for (int i = startIndex; i < num_elements; i = i + numthreads)
+     .      .  202: 	{
+     .      .  203: 		if(opt_sync == 'm' && mutexflag){
+     .      .  204: 			if(clock_gettime(CLOCK_MONOTONIC, &start) == -1){
+     .      .  205: 				print_error("Error: clock gettime error for start");
+     .      .  206: 			}
+     .      .  207: 			
+     .      .  208: 			pthread_mutex_lock(&mutexs[hash_key[i]]);
+     .      .  209: 			
+     .      .  210: 			if(clock_gettime(CLOCK_MONOTONIC, &end) == -1){
+     .      .  211: 				print_error("Error: clock gettime error for end");
+     .      .  212: 			}
+     .      .  213: 			wait_time += 1000000000L * (end.tv_sec - start.tv_sec) + end.tv_nsec - start.tv_nsec;
+     .      .  214: 			
+     .      .  215: 			find = SortedList_lookup(&lists[hash_key[i]],elements[i].key);
+     .      .  216: 			if (find == NULL){
+     .      .  217: 				print_error2("Error: Lookup but Corrupted list");
+     .      .  218: 			}
+     .      .  219: 			if (SortedList_delete(find)){
+     .      .  220: 				print_error2("Error: Delete but corrupted list");
+     .      .  221: 			}
+     .      .  222: 			pthread_mutex_unlock(&mutexs[hash_key[i]]);
+     .      .  223: 		} 
+     .      .  224: 		else if (opt_sync == 's' && spinlockflag){
+     .      .  225: 			if(clock_gettime(CLOCK_MONOTONIC, &start) == -1){
+     .      .  226: 				print_error("Error: clock gettime error for start");
+     .      .  227: 			}
+    68     68  228: 			while(__sync_lock_test_and_set(&spinlocks[hash_key[i]],1));
+     .      .  229: 
+     .      .  230: 			if(clock_gettime(CLOCK_MONOTONIC, &end) == -1){
+     .      .  231: 				print_error("Error: clock gettime error for end");
+     .      .  232: 			}
+     .      .  233: 
+     .      .  234: 			wait_time += 1000000000L * (end.tv_sec - start.tv_sec) + end.tv_nsec - start.tv_nsec;
+     .      .  235: 			
+     .     24  236: 			find = SortedList_lookup(&lists[hash_key[i]],elements[i].key);
+     .      .  237: 			if (find == NULL){
+     .      .  238: 				print_error2("Error: Lookup but Corrupted &lists[hash_key[i]]");
+     .      .  239: 			}
+     .      .  240: 			if (SortedList_delete(find)){
+     .      .  241: 				print_error2("Error: Delete but corrupted &lists[hash_key[i]]");
+     .      .  242: 			}
+     .      .  243: 			__sync_lock_release(&spinlocks[hash_key[i]]);
+     .      .  244: 		}
+     .      .  245: 		else{
+     .      .  246: 			find = SortedList_lookup(&lists[hash_key[i]],elements[i].key);
+     .      .  247: 			if (find == NULL){
+     .      .  248: 				print_error2("Error: Lookup but Corrupted &lists[hash_key[i]]");
+     .      .  249: 			}
+     .      .  250: 			if (SortedList_delete(find)){
+     .      .  251: 				print_error2("Error: Delete but corrupted &lists[hash_key[i]]");
+     .      .  252: 			}
+     .      .  253: 		}
+     .      .  254: 	}
+     .      .  255: 	return NULL;
+     .      .  256: }
+---
+     .      .  257: 
+     .      .  258: int main(int argc, char **argv){
+     .      .  259: 	int choice;
+     .      .  260: 
+     .      .  261: 	/*-----------------------Argument Setup----------------------------*/

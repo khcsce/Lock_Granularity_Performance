@@ -1,0 +1,123 @@
+#NAME: Khoa Quach
+#EMAIL: khoaquachschool@gmail.com
+#ID: 105123806
+Content:
+lab2b-105123806.tar.gz which contains:
+SortedList.h
+SortedList.c
+lab2_list.c    ... main source code
+lab2_list.csv ... data from tests
+lab2b_list.gp  ... script to plot graphs via gnuplot
+profile.out
+README (this file)
+Makefile
+
+Makefile: 
+default ... build lab2_add and lab2_list exec
+build ... same as default
+tests ... run all (over 200) specified test cases to generate results in CSV files
+graphs ... use gnuplot(1) and the supplied data reduction scripts to generate the required graphs
+dist ... create the deliverable tarball
+profile ... profiling report showing where time was spent in the un-partitioned spin-lock implementation
+clean ... delete all programs and output created by the Makefile
+
+Graph
+lab2b_1.png ... throughput vs. number of threads for mutex and spin-lock synchronized list operations.
+lab2b_2.png ... mean time per mutex wait and mean time per operation for mutex-synchronized list operations.
+lab2b_3.png ... successful iterations vs. threads for each synchronization method.
+lab2b_4.png ... throughput vs. number of threads for mutex synchronized partitioned lists.
+lab2b_5.png ... throughput vs. number of threads for spin-lock-synchronized partitioned lists.
+
+Description of project:
+Built upon project 2A
+Lock Contention
+"
+Do performance instrumentation and measurement to confirm the cause of the problem.
+Implement a new option to divide a list into sublists and support synchronization on sublists, thus allowing parallel access to the (original) list.
+Do new performance measurements to confirm that the problem has been solved.
+"
+
+Sources:
+https://notes.shichao.io/apue/ch11/
+TA: Liu Tengyu discussion slides
+https://www.cs.cornell.edu/courses/cs4410/2015su/lectures/lec06-spin.html
+http://web.cs.ucla.edu/classes/fall09/cs111/scribe/9/index.html
+https://stackoverflow.com/questions/1875305/view-tabular-file-such-as-csv-from-command-line
+https://gperftools.github.io/gperftools/cpuprofile.html
+
+Question Answers:
+______________________________________________________
+QUESTION 2.3.1 - Cycles in the basic list implementation:
+Where do you believe most of the cycles are spent in the 1 and 2-thread list tests ?
+Why do you believe these to be the most expensive parts of the code?
+Where do you believe most of the time/cycles are being spent in the high-thread spin-lock tests?
+Where do you believe most of the time/cycles are being spent in the high-thread mutex tests?
+
+For 1 and 2 thread list tests:
+This is regards to the use of mutex.
+There isn't much contention since little time is spent waiting for locks due to thenature of having few threads, so the most of the cycles are spent in the list operations such as inserts , deletes, etc. These operations are the most expensive parts of the code
+cause the amount of accessing and looping. 
+For 2 threads, most of the cycles should still be probably spent in the list operations.
+
+For high thread spin-lock tests, most of the time/cycles are being spent "spinning"
+since high contention
+For high thread  mutex tests,  most of the time/cycles are  *possibly* being spent for the
+the list operations since for mutex implementation, threads just wait to accquire
+the lock. 
+
+HOWEVER, it is important to note that this waiting time does add to the 
+overall time. 
+**So, arguably, most of the time can possibly be in the mutex functions
+and the sleeping/waking of threads; thus, time is mostly spent on context switching
+and its overhead.
+
+_____________________________________________________
+QUESTION 2.3.2 - Execution Profiling:
+Where (what lines of code) are consuming most of the cycles when the spin-lock version of the list exerciser is run with a large number of threads?
+
+Why does this operation become so expensive with large numbers of threads?
+
+
+The line of code while(__sync_lock_test_and_set(&spinlocks[k],1)); is consuming
+most of the cycles when the spin-lock version is run with a large number of threads.
+This operation becomes expensive with a large number of threads since
+many cycles/time is spent spinning and waiting the lock due to large number of threads
+which means higher contention. There is an increase of threads that are spinning while waiting for the lock. 
+
+
+______________________________________________________
+QUESTION 2.3.3 - Mutex Wait Time:
+Look at the average time per operation (vs. # threads) and the average wait-for-mutex time (vs. #threads).
+Why does the average lock-wait time rise so dramatically with the number of contending threads?
+Why does the completion time per operation rise (less dramatically) with the number of contending threads?
+How is it possible for the wait time per operation to go up faster (or higher) than the completion time per operation?
+
+
+The average lock-wait time rrises so dramatically with the number of contending threads because multiple threads are trying modify the shared resource which is essentially the list. With more threads, there will be more contention for the locks. Thus, the time spent
+for the spreads waiting to modify these shared resources increases since multiple threads
+can be waiting for a lock. The notes made about context switch for previous questions and overhead also apply here.
+
+The completion time per operation rises less dramatically with the number of contending threads also due to time spent for the context switches and overheads, and similar reasons.
+
+However, the time per operation rises lesses dramatically since is the time calculated after all threads have joined. Actual time spent for operations averages out the factors
+contributing to the time. It is more serial, while for the lock-wait time it's calculation is more parallel, meaning per thread.
+
+A possible reason why it's possible for the wait time per operation to go up faster
+or higher than the completion time per operation is because the former is considering
+the threads that are blocked during an execution cycle. However, the overall time to competion without waiting is probably not affected with the number of threads,  the wait time per operation can go up higher than the completion time per operation. The same notes from the paragraph above apply here.
+
+______________________________________________________
+QUESTION 2.3.4 - Performance of Partitioned Lists
+Explain the change in performance of the synchronized methods as a function of the number of lists.
+Should the throughput continue increasing as the number of lists is further increased? If not, explain why not.
+It seems reasonable to suggest the throughput of an N-way partitioned list should be equivalent to the throughput of a single list with fewer (1/N) threads. Does this appear to be true in the above curves? If not, explain why not.
+
+The performance of the synchronized methods gets better with the number of lists (sublists) since threads compete with a less amount of threads since they can
+acquire locks from different lists. => lower contention.
+
+No the thoughput should not continue increasing as the number of lists is further increased because overtime, the graph seems to look like ith will stable out some point. 
+It looks logarithmic. This possibly due to how overtime we will reach the least conention. Increasing the number of lists, the amount of elements in each list would decrease => N lists , where N is the number of total elements.
+
+For the curves generated, the suggestion that the throughput of an N way paritioned list
+should be equivalent to the throughput of a single list with (1/N) threads
+seems to be valid.
