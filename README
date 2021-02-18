@@ -1,6 +1,12 @@
 #NAME: Khoa Quach
 #EMAIL: khoaquachschool@gmail.com
 #ID: 105123806
+
+Note to grader:
+profile.out number of samples vary from 300-1000 something
+Probably due to people using lnxsrv09 as well
+Sanity check passes in all cases though.
+
 Content:
 lab2b-105123806.tar.gz which contains:
 SortedList.h
